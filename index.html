@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ตารางธาตุ 3D</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Sarabun','Prompt',-apple-system,'Segoe UI',sans-serif;background:#0a0a12;color:#e8e4dc;overflow-x:hidden;min-height:100vh}
+#atomContainer{position:fixed;top:0;right:0;width:45%;height:100vh;z-index:1}
+.main-content{position:relative;z-index:2;width:100%;padding:20px 20px 20px 24px}
+.header{padding:12px 0 8px}
+.header h1{font-size:20px;font-weight:600;letter-spacing:2px}
+.header h1 span{font-weight:300;opacity:0.4}
+.header p{font-size:11px;color:rgba(232,228,220,0.3);margin-top:2px;letter-spacing:0.5px}
+.legend{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 10px}
+.leg-item{display:flex;align-items:center;gap:4px;font-size:9px;color:rgba(232,228,220,0.4);padding:2px 7px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
+.leg-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.table-wrap{overflow-x:auto;padding-bottom:8px}
+.ptable{display:grid;grid-template-columns:repeat(18,52px);gap:2px;min-width:970px}
+.ptable .empty{height:1px}
+.elem{position:relative;border-radius:4px;padding:3px 2px;cursor:pointer;transition:all 0.15s;border:1px solid transparent;text-align:center;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.elem:hover{transform:scale(1.15);z-index:10;border-color:rgba(255,255,255,0.2);box-shadow:0 4px 20px rgba(0,0,0,0.4)}
+.elem.active{border-color:#fff;box-shadow:0 0 20px rgba(255,255,255,0.1)}
+.elem .z{font-size:7px;color:rgba(232,228,220,0.25);line-height:1}
+.elem .sym{font-size:13px;font-weight:600;line-height:1.1;margin:1px 0}
+.elem .mass{font-size:6px;color:rgba(232,228,220,0.2);line-height:1}
+.elem .name-th{font-size:5px;color:rgba(232,228,220,0.3);line-height:1;margin-top:1px}
+.elem.g1{grid-column:1}
+.elem.g2{grid-column:2}
+.elem.g3{grid-column:3}
+.elem.g4{grid-column:4}
+.elem.g5{grid-column:5}
+.elem.g6{grid-column:6}
+.elem.g7{grid-column:7}
+.elem.g8{grid-column:8}
+.elem.g9{grid-column:9}
+.elem.g10{grid-column:10}
+.elem.g11{grid-column:11}
+.elem.g12{grid-column:12}
+.elem.g13{grid-column:13}
+.elem.g14{grid-column:14}
+.elem.g15{grid-column:15}
+.elem.g16{grid-column:16}
+.elem.g17{grid-column:17}
+.elem.g18{grid-column:18}
+.elem.r1{grid-row:1}
+.elem.r2{grid-row:2}
+.elem.r3{grid-row:3}
+.elem.r4{grid-row:4}
+.elem.r5{grid-row:5}
+.elem.r6{grid-row:6}
+.elem.r7{grid-row:7}
+.elem.r8{grid-row:8}
+.elem.r9{grid-row:9}
+.empty-r1{grid-row:1;grid-column:1/19;height:8px}
+.gap-r2{grid-row:2;grid-column:3/13}
+.gap-r3{grid-row:3;grid-column:3/13}
+.gap-r4{grid-row:4;grid-column:3/13}
+.gap-r5{grid-row:5;grid-column:3/13}
+.gap-r6{grid-row:6;grid-column:3/13}
+.f-label{font-size:7px;color:rgba(232,228,220,0.15);display:flex;align-items:center;justify-content:center;min-height:48px;grid-column:1/3;letter-spacing:1px;text-transform:uppercase}
+
+/* Categories */
+.c-noble{background:rgba(162,155,254,0.12)}
+.c-noble:hover{background:rgba(162,155,254,0.25)}
+.c-alkali{background:rgba(255,107,107,0.12)}
+.c-alkali:hover{background:rgba(255,107,107,0.25)}
+.c-alkaline{background:rgba(255,165,2,0.12)}
+.c-alkaline:hover{background:rgba(255,165,2,0.25)}
+.c-transition{background:rgba(255,211,42,0.10)}
+.c-transition:hover{background:rgba(255,211,42,0.22)}
+.c-post{background:rgba(46,213,115,0.10)}
+.c-post:hover{background:rgba(46,213,115,0.22)}
+.c-metalloid{background:rgba(122,239,159,0.10)}
+.c-metalloid:hover{background:rgba(122,239,159,0.22)}
+.c-nonmetal{background:rgba(112,161,255,0.10)}
+.c-nonmetal:hover{background:rgba(112,161,255,0.22)}
+.c-halogen{background:rgba(83,82,237,0.12)}
+.c-halogen:hover{background:rgba(83,82,237,0.25)}
+.c-lanthanide{background:rgba(255,71,87,0.10)}
+.c-lanthanide:hover{background:rgba(255,71,87,0.22)}
+.c-actinide{background:rgba(255,99,72,0.10)}
+.c-actinide:hover{background:rgba(255,99,72,0.22)}
+
+/* Info Panel */
+.info-panel{position:fixed;left:-420px;top:0;width:400px;height:100%;z-index:20;background:rgba(10,10,18,0.9);backdrop-filter:blur(30px);border-right:1px solid rgba(255,255,255,0.04);padding:32px;overflow-y:auto;transition:left 0.5s cubic-bezier(0.16,1,0.3,1)}
+.info-panel.open{left:0}
+.info-panel .close{position:absolute;top:20px;right:20px;width:32px;height:32px;border-radius:50%;border:none;background:rgba(255,255,255,0.04);cursor:pointer;font-size:16px;color:rgba(255,255,255,0.3);transition:all 0.2s;display:flex;align-items:center;justify-content:center}
+.info-panel .close:hover{background:rgba(255,255,255,0.1);color:#fff}
+.ip-sym{font-size:48px;font-weight:700;line-height:1;margin-bottom:2px}
+.ip-z{font-size:14px;color:rgba(232,228,220,0.3);margin-bottom:4px}
+.ip-name{font-size:22px;font-weight:600;margin-bottom:2px}
+.ip-en{font-size:14px;color:rgba(232,228,220,0.3);margin-bottom:16px}
+.ip-section{margin-bottom:16px}
+.ip-section label{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:rgba(232,228,220,0.2);display:block;margin-bottom:4px}
+.ip-section p{font-size:13px;line-height:1.7;color:rgba(232,228,220,0.55)}
+.ip-prop{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:16px}
+.ip-prop-item{padding:6px 10px;background:rgba(255,255,255,0.03);border-radius:6px}
+.ip-prop-item .l{font-size:8px;color:rgba(232,228,220,0.2);text-transform:uppercase;letter-spacing:1px}
+.ip-prop-item .v{font-size:13px;color:rgba(232,228,220,0.6);font-weight:500}
+.overlay{position:fixed;top:0;left:0;right:0;bottom:0;z-index:15;display:none}
+.overlay.show{display:block}
+
+.row-label{font-size:8px;color:rgba(232,228,220,0.08);display:flex;align-items:center;justify-content:center;min-width:18px;letter-spacing:0.5px}
+
+@media(max-width:1100px){
+#atomContainer{width:35%}
+.main-content{padding:12px 12px 12px 16px}
+.ptable{grid-template-columns:repeat(18,42px);min-width:780px}
+.elem{min-height:40px;padding:2px}
+.elem .sym{font-size:11px}
+}
+@media(max-width:768px){
+#atomContainer{position:relative;width:100%;height:50vh}
+.main-content{padding:10px 10px 10px 12px}
+.info-panel{width:100%;left:-100%}
+.info-panel.open{left:0}
+.ptable{grid-template-columns:repeat(18,38px);min-width:700px;gap:1.5px}
+.elem{min-height:36px;padding:1px;border-radius:3px}
+.elem .sym{font-size:10px}
+.elem .z{font-size:6px}
+.elem .mass{font-size:5px}
+.elem .name-th{font-size:4px}
+.header h1{font-size:16px}
+}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.06);border-radius:10px}
+</style>
+</head>
+<body>
+
+<div id="atomContainer"></div>
+<div class="main-content" id="mainContent">
+  <div class="header">
+    <h1>🧪 <span>3D</span> ตารางธาตุ</h1>
+    <p>คลิกธาตุเพื่อดูอะตอม 3D และรายละเอียด</p>
+  </div>
+  <div class="legend" id="legend"></div>
+  <div class="table-wrap"><div class="ptable" id="ptable"></div></div>
+</div>
+
+<div class="overlay" id="overlay"></div>
+<div class="info-panel" id="infoPanel">
+  <button class="close" id="closePanel">✕</button>
+  <div id="panelContent">
+    <div class="ip-sym" id="ipSym">H</div>
+    <div class="ip-z" id="ipZ">Atomic Number 1</div>
+    <div class="ip-name" id="ipName">ไฮโดรเจน</div>
+    <div class="ip-en" id="ipEn">Hydrogen</div>
+    <div class="ip-prop" id="ipProps"></div>
+    <div class="ip-section"><label>รายละเอียด</label><p id="ipDesc"></p></div>
+    <div class="ip-section"><label>การจัดเรียงอิเล็กตรอน</label><p id="ipConf"></p></div>
+    <div class="ip-section"><label>ข้อเท็จจริง</label><p id="ipFact"></p></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const THREE = window.THREE;
+const OrbitControls = THREE.OrbitControls;
+
+// ========== ELEMENTS DATA ==========
+const CAT = {
+  alkali:'alkali',alkaline:'alkaline',transition:'transition',post:'post',
+  metalloid:'metalloid',nonmetal:'nonmetal',halogen:'halogen',noble:'noble',
+  lanthanide:'lanthanide',actinide:'actinide'
+};
+const CAT_COLORS = {
+  alkali:'#ff6b6b',alkaline:'#ffa502',transition:'#ffd32a',post:'#2ed573',
+  metalloid:'#7bed9f',nonmetal:'#70a1ff',halogen:'#5352ed',noble:'#a29bfe',
+  lanthanide:'#ff4757',actinide:'#ff6348'
+};
+const CAT_TH = {
+  alkali:'โลหะอัลคาไล',alkaline:'โลหะอัลคาไลน์เอิร์ธ',transition:'โลหะทรานซิชัน',post:'โลหะหลังทรานซิชัน',
+  metalloid:'กึ่งโลหะ',nonmetal:'อโลหะ',halogen:'แฮโลเจน',noble:'ก๊าซมีตระกูล',
+  lanthanide:'แลนทาไนด์',actinide:'แอกทิไนด์'
+};
+const CATS = ['alkali','alkaline','transition','post','metalloid','nonmetal','halogen','noble','lanthanide','actinide'];
+
+const E = {};
+function el(z,sym,mass,th,en,cat,g,p,block,conf,desc,fact){
+  E[z]={z,sym,mass,th,en,cat,g,p,block,conf,desc:desc||'',fact:fact||''};
+}
+
+// ---- HYDROGEN to OGANESSON ----
+el(1,'H',1.008,'ไฮโดรเจน','Hydrogen','nonmetal',1,1,'s',[1],
+'ไฮโดรเจนเป็นธาตุที่มีมากที่สุดในจักรวาล เป็นองค์ประกอบหลักของดาวฤกษ์ รวมถึงดวงอาทิตย์ของเรา ที่อุณหภูมิห้องเป็นก๊าซไม่มีสี ไม่มีกลิ่น',
+'ไฮโดรเจนเป็นธาตุที่เบาที่สุด มีเพียง 1 โปรตอน 1 อิเล็กตรอน ไม่มีนิวตรอนเลย! เป็นเชื้อเพลิงของดวงอาทิตย์ผ่านปฏิกิริยานิวเคลียร์ฟิวชัน');
+el(2,'He',4.003,'ฮีเลียม','Helium','noble',18,1,'s',[2],
+'ฮีเลียมเป็นก๊าซมีตระกูล ไม่ทำปฏิกิริยากับธาตุอื่น ใช้ในบอลลูนและเรือเหาะ ด้วยความเบากว่าอากาศ',
+'ฮีเลียมถูกค้นพบครั้งแรกบนดวงอาทิตย์ก่อนบนโลก! ชื่อมาจาก Helios (เทพแห่งดวงอาทิตย์)');
+el(3,'Li',6.941,'ลิเทียม','Lithium','alkali',1,2,'s',[2,1],
+'ลิเทียมเป็นโลหะอัลคาไล เบาที่สุดในกลุ่ม ทำปฏิกิริยากับน้ำได้รุนแรง ใช้ทำแบตเตอรี่รีชาร์จ',
+'ลิเทียมใช้ในแบตเตอรี่ของโทรศัพท์มือถือและรถยนต์ไฟฟ้า เป็นส่วนประกอบในยารักษาโรคไบโพลาร์');
+el(4,'Be',9.012,'เบริลเลียม','Beryllium','alkaline',2,2,'s',[2,2],
+'เบริลเลียมเป็นโลหะแข็งแต่เปราะ ทนความร้อนได้ดี ใช้ในอุตสาหกรรมอากาศยานและนิวเคลียร์',
+'เบริลเลียมมีพิษสูง! การสูดดมฝุ่นเบริลเลียมทำให้เกิดโรคเบริลลิโอซิส');
+el(5,'B',10.811,'โบรอน','Boron','metalloid',13,2,'p',[2,3],
+'โบรอนเป็นกึ่งโลหะ ใช้ในสารทำความสะอาดและอุปกรณ์กั้นนิวตรอนในเครื่องปฏิกรณ์นิวเคลียร์',
+'โบรอนจำเป็นต่อการเจริญเติบโตของพืช ช่วยในการสร้างผนังเซลล์');
+el(6,'C',12.011,'คาร์บอน','Carbon','nonmetal',14,2,'p',[2,4],
+'คาร์บอนเป็นธาตุพื้นฐานของสิ่งมีชีวิต ประกอบเป็นสารอินทรีย์ทั้งหมด มีอัญรูปหลายแบบ เช่น เพชร กราไฟต์',
+'คาร์บอนมีไอโซโทป C-14 ใช้วัดอายุของวัตถุโบราณได้!');
+el(7,'N',14.007,'ไนโตรเจน','Nitrogen','nonmetal',15,2,'p',[2,5],
+'ไนโตรเจนเป็นก๊าซหลักในอากาศ (78%) เป็นส่วนประกอบสำคัญของโปรตีนและ DNA',
+'ปุ๋ยแอมโมเนียผลิตจากไนโตรเจนในอากาศโดยกระบวนการ Haber ซึ่งเลี้ยงประชากรโลกไว้มากมาย');
+el(8,'O',15.999,'ออกซิเจน','Oxygen','nonmetal',16,2,'p',[2,6],
+'ออกซิเจนเป็นก๊าซที่จำเป็นต่อการหายใจของสิ่งมีชีวิต ทำให้เกิดการเผาไหม้ เป็นส่วนประกอบของน้ำ',
+'ออกซิเจนในบรรยากาศเกิดจากกระบวนการสังเคราะห์แสงของพืช');
+el(9,'F',18.998,'ฟลูออรีน','Fluorine','halogen',17,2,'p',[2,7],
+'ฟลูออรีนเป็นธาตุที่มีอิเล็กโตรเนกาทิวิตีสูงที่สุด ทำปฏิกิริยารุนแรง ใช้ในยาสีฟันป้องกันฟันผุ',
+'ฟลูออรีนเป็นพิษร้ายแรง แต่ในปริมาณน้อยช่วยป้องกันฟันผุ');
+el(10,'Ne',20.180,'นีออน','Neon','noble',18,2,'p',[2,8],
+'นีออนเป็นก๊าซมีตระกูล ใช้ในหลอดไฟนีออนให้แสงสีส้ม-แดง',
+'หลอดนีออนให้แสงเมื่อถูกกระตุ้นด้วยไฟฟ้า แต่ละก๊าซให้สีต่างกัน');
+el(11,'Na',22.990,'โซเดียม','Sodium','alkali',1,3,'s',[2,8,1],
+'โซเดียมเป็นโลหะอัลคาไลอ่อน ตัดด้วยมีดได้ ทำปฏิกิริยารุนแรงกับน้ำ เป็นส่วนประกอบของเกลือแกง',
+'โซเดียมจำเป็นต่อระบบประสาทและการทำงานของกล้ามเนื้อ');
+el(12,'Mg',24.305,'แมกนีเซียม','Magnesium','alkaline',2,3,'s',[2,8,2],
+'แมกนีเซียมเป็นโลหะเบา แข็งแรง ใช้ในอุตสาหกรรมอากาศยานและเป็นส่วนประกอบของคลอโรฟิลล์',
+'แมกนีเซียมจำเป็นต่อการทำงานของกล้ามเนื้อและหัวใจ');
+el(13,'Al',26.982,'อะลูมิเนียม','Aluminium','post',13,3,'p',[2,8,3],
+'อะลูมิเนียมเป็นโลหะเบาที่ใช้มากที่สุดในโลก ทนการกัดกร่อน ใช้ในกระป๋องเครื่องดื่มและโครงสร้างเครื่องบิน',
+'อะลูมิเนียมเป็นโลหะที่มีมากที่สุดในเปลือกโลก');
+el(14,'Si',28.086,'ซิลิคอน','Silicon','metalloid',14,3,'p',[2,8,4],
+'ซิลิคอนเป็นกึ่งโลหะ เป็นหัวใจของอุตสาหกรรมเซมิคอนดักเตอร์และชิปคอมพิวเตอร์',
+'ซิลิคอนเป็นธาตุที่มากเป็นอันดับ 2 ในเปลือกรองจากออกซิเจน');
+el(15,'P',30.974,'ฟอสฟอรัส','Phosphorus','nonmetal',15,3,'p',[2,8,5],
+'ฟอสฟอรัสจำเป็นต่อการสร้าง DNA, RNA และ ATP เป็นส่วนประกอบของกระดูกและฟัน',
+'ฟอสฟอรัสขาวติดไฟได้เองในอากาศ ใช้ในระเบิดเพลิง');
+el(16,'S',32.065,'กำมะถัน','Sulfur','nonmetal',16,3,'p',[2,8,6],
+'กำมะถันเป็นของแข็งสีเหลือง ใช้ในอุตสาหกรรมกรดซัลฟิวริก ยางรถยนต์ และปุ๋ย',
+'กลิ่นไข่เน่ามาจากก๊าซไฮโดรเจนซัลไฟด์');
+el(17,'Cl',35.453,'คลอรีน','Chlorine','halogen',17,3,'p',[2,8,7],
+'คลอรีนเป็นก๊าซสีเขียวอมเหลือง มีกลิ่นฉุน ใช้ฆ่าเชื้อโรคในน้ำประปา',
+'คลอรีนถูกใช้ในสงครามโลกครั้งที่ 1 เป็นอาวุธเคมี');
+el(18,'Ar',39.948,'อาร์กอน','Argon','noble',18,3,'p',[2,8,8],
+'อาร์กอนเป็นก๊าซมีตระกูล ใช้ในหลอดไฟเพื่อป้องกันไส้หลอดออกซิไดซ์',
+'อาร์กอนเป็นก๊าซที่มีมากเป็นอันดับ 3 ในอากาศ');
+el(19,'K',39.098,'โพแทสเซียม','Potassium','alkali',1,4,'s',[2,8,8,1],
+'โพแทสเซียมเป็นโลหะอัลคาไล ทำปฏิกิริยากับน้ำรุนแรง จำเป็นต่อการทำงานของเซลล์ประสาท',
+'โพแทสเซียมในกล้วยช่วยลดความดันโลหิต');
+el(20,'Ca',40.078,'แคลเซียม','Calcium','alkaline',2,4,'s',[2,8,8,2],
+'แคลเซียมเป็นส่วนประกอบหลักของกระดูกและฟัน จำเป็นต่อการแข็งตัวของเลือด',
+'แคลเซียมเป็นธาตุที่มีมากเป็นอันดับ 5 ในร่างกายมนุษย์');
+el(21,'Sc',44.956,'สแกนเดียม','Scandium','transition',3,4,'d',[2,8,9,2],
+'สแกนเดียมเป็นโลหะทรานซิชัน พบได้ยาก ใช้ในอุปกรณ์กีฬาระดับสูง',
+'สแกนเดียมมีสมบัติคล้ายอะลูมิเนียมแต่แข็งแรงกว่า');
+el(22,'Ti',47.867,'ไทเทเนียม','Titanium','transition',4,4,'d',[2,8,10,2],
+'ไทเทเนียมแข็งแรง ทนทาน เบา ไม่เป็นสนิม ใช้ในอากาศยานและรากฟันเทียม',
+'ไทเทเนียมเข้ากับร่างกายมนุษย์ได้ดี ใช้ทำข้อต่อเทียม');
+el(23,'V',50.942,'วาเนเดียม','Vanadium','transition',5,4,'d',[2,8,11,2],
+'วาเนเดียมใช้ในการผลิตเหล็กกล้าพิเศษ มีความแข็งแรงสูง',
+'วาเนเดียมเป็นส่วนประกอบของเอนไซม์ในร่างกาย');
+el(24,'Cr',51.996,'โครเมียม','Chromium','transition',6,4,'d',[2,8,13,1],
+'โครเมียมใช้ชุบโลหะให้เงางามและกันสนิม เป็นส่วนประกอบของสแตนเลส',
+'โครเมียมจำเป็นต่อการเผาผลาญน้ำตาลในร่างกาย');
+el(25,'Mn',54.938,'แมงกานีส','Manganese','transition',7,4,'d',[2,8,13,2],
+'แมงกานีสใช่ในอุตสาหกรรมเหล็กกล้า เป็นธาตุจำเป็นของพืชและสัตว์',
+'ร่างกายต้องการแมงกานีสปริมาณน้อยมาก');
+el(26,'Fe',55.845,'เหล็ก','Iron','transition',8,4,'d',[2,8,14,2],
+'เหล็กเป็นธาตุที่ใช้มากที่สุดในอุตสาหกรรม เป็นส่วนประกอบของฮีโมโกลบินในเลือด',
+'แกนโลกชั้นในเป็นเหล็กบริสุทธิ์');
+el(27,'Co',58.933,'โคบอลต์','Cobalt','transition',9,4,'d',[2,8,15,2],
+'โคบอลต์ใช้ในแบตเตอรี่และแม่เหล็ก สีน้ำเงินโคบอลต์ใช้ในเครื่องเคลือบ',
+'โคบอลต์เป็นส่วนประกอบของวิตามิน B12');
+el(28,'Ni',58.693,'นิกเกิล','Nickel','transition',10,4,'d',[2,8,16,2],
+'นิกเกิลใช้ในสแตนเลสและแบตเตอรี่ ทนการกัดกร่อน');
+el(29,'Cu',63.546,'ทองแดง','Copper','transition',11,4,'d',[2,8,18,1],
+'ทองแดงนำไฟฟ้าและความร้อนได้ดีเยี่ยม ใช้ในสายไฟฟ้าและท่อประปา',
+'ทองแดงใช้ทำเหรียญมาตั้งแต่โบราณ');
+el(30,'Zn',65.38,'สังกะสี','Zinc','transition',12,4,'d',[2,8,18,2],
+'สังกะสีใช้เคลือบเหล็กกันสนิม เป็นส่วนประกอบของเอนไซม์ในร่างกาย',
+'สังกะสีจำเป็นต่อระบบภูมิคุ้มกัน');
+// Period 5
+el(31,'Ga',69.723,'แกลเลียม','Gallium','post',13,4,'p',[2,8,18,3],
+'แกลเลียมหลอมเหลวที่อุณหภูมิ 30°C ถือในมือละลายได้',);
+el(32,'Ge',72.630,'เจอร์เมเนียม','Germanium','metalloid',14,4,'p',[2,8,18,4]);
+el(33,'As',74.922,'สารหนู','Arsenic','metalloid',15,4,'p',[2,8,18,5],
+'สารหนูเป็นพิษร้ายแรง ใช้ในอุตสาหกรรมเซมิคอนดักเตอร์');
+el(34,'Se',78.971,'ซีลีเนียม','Selenium','nonmetal',16,4,'p',[2,8,18,6]);
+el(35,'Br',79.904,'โบรมีน','Bromine','halogen',17,4,'p',[2,8,18,7]);
+el(36,'Kr',83.798,'คริปทอน','Krypton','noble',18,4,'p',[2,8,18,8]);
+el(37,'Rb',85.468,'รูบิเดียม','Rubidium','alkali',1,5,'s',[2,8,18,8,1]);
+el(38,'Sr',87.620,'สตรอนเชียม','Strontium','alkaline',2,5,'s',[2,8,18,8,2]);
+el(39,'Y',88.906,'อิตเทรียม','Yttrium','transition',3,5,'d',[2,8,18,9,2]);
+el(40,'Zr',91.224,'เซอร์โคเนียม','Zirconium','transition',4,5,'d',[2,8,18,10,2]);
+el(41,'Nb',92.906,'ไนโอเบียม','Niobium','transition',5,5,'d',[2,8,18,12,1]);
+el(42,'Mo',95.950,'โมลิบดีนัม','Molybdenum','transition',6,5,'d',[2,8,18,13,1]);
+el(43,'Tc',98,'เทคนีเชียม','Technetium','transition',7,5,'d',[2,8,18,14,1]);
+el(44,'Ru',101.07,'รูทีเนียม','Ruthenium','transition',8,5,'d',[2,8,18,15,1]);
+el(45,'Rh',102.91,'โรเดียม','Rhodium','transition',9,5,'d',[2,8,18,16,1]);
+el(46,'Pd',106.42,'แพลเลเดียม','Palladium','transition',10,5,'d',[2,8,18,18]);
+el(47,'Ag',107.87,'เงิน','Silver','transition',11,5,'d',[2,8,18,18,1],
+'เงินนำไฟฟ้าได้ดีที่สุดในบรรดาโลหะ ใช้ในเครื่องประดับและวงจรไฟฟ้า');
+el(48,'Cd',112.41,'แคดเมียม','Cadmium','transition',12,5,'d',[2,8,18,18,2]);
+el(49,'In',114.82,'อินเดียม','Indium','post',13,5,'p',[2,8,18,18,3]);
+el(50,'Sn',118.71,'ดีบุก','Tin','post',14,5,'p',[2,8,18,18,4]);
+el(51,'Sb',121.76,'พลวง','Antimony','metalloid',15,5,'p',[2,8,18,18,5]);
+el(52,'Te',127.60,'เทลลูเรียม','Tellurium','metalloid',16,5,'p',[2,8,18,18,6]);
+el(53,'I',126.90,'ไอโอดีน','Iodine','halogen',17,5,'p',[2,8,18,18,7],
+'ไอโอดีนจำเป็นต่อต่อมไทรอยด์ การขาดไอโอดีนทำให้เป็นคอพอก');
+el(54,'Xe',131.29,'ซีนอน','Xenon','noble',18,5,'p',[2,8,18,18,8]);
+// Period 6
+el(55,'Cs',132.91,'ซีเซียม','Caesium','alkali',1,6,'s',[2,8,18,18,8,1]);
+el(56,'Ba',137.33,'แบเรียม','Barium','alkaline',2,6,'s',[2,8,18,18,8,2]);
+// Lanthanides 57-70
+el(57,'La',138.91,'แลนทานัม','Lanthanum','lanthanide',3,6,'f',[2,8,18,18,9,2]);
+el(58,'Ce',140.12,'ซีเรียม','Cerium','lanthanide',4,6,'f',[2,8,18,19,9,2]);
+el(59,'Pr',140.91,'เพรซีโอดิเมียม','Praseodymium','lanthanide',5,6,'f',[2,8,18,21,8,2]);
+el(60,'Nd',144.24,'นีโอดิเมียม','Neodymium','lanthanide',6,6,'f',[2,8,18,22,8,2]);
+el(61,'Pm',145,'โพรมีเทียม','Promethium','lanthanide',7,6,'f',[2,8,18,23,8,2]);
+el(62,'Sm',150.36,'ซาแมเรียม','Samarium','lanthanide',8,6,'f',[2,8,18,24,8,2]);
+el(63,'Eu',151.96,'ยูโรเพียม','Europium','lanthanide',9,6,'f',[2,8,18,25,8,2]);
+el(64,'Gd',157.25,'แกโดลิเนียม','Gadolinium','lanthanide',10,6,'f',[2,8,18,25,9,2]);
+el(65,'Tb',158.93,'เทอร์เบียม','Terbium','lanthanide',11,6,'f',[2,8,18,27,8,2]);
+el(66,'Dy',162.50,'ดิสโพรเซียม','Dysprosium','lanthanide',12,6,'f',[2,8,18,28,8,2]);
+el(67,'Ho',164.93,'โฮลเมียม','Holmium','lanthanide',13,6,'f',[2,8,18,29,8,2]);
+el(68,'Er',167.26,'เออร์เบียม','Erbium','lanthanide',14,6,'f',[2,8,18,30,8,2]);
+el(69,'Tm',168.93,'ทูเลียม','Thulium','lanthanide',15,6,'f',[2,8,18,31,8,2]);
+el(70,'Yb',173.04,'อิตเทอร์เบียม','Ytterbium','lanthanide',16,6,'f',[2,8,18,32,8,2]);
+el(71,'Lu',174.97,'ลูทีเชียม','Lutetium','lanthanide',17,6,'f',[2,8,18,32,9,2]);
+// Hf-Rn
+el(72,'Hf',178.49,'ฮาฟเนียม','Hafnium','transition',4,6,'d',[2,8,18,32,10,2]);
+el(73,'Ta',180.95,'แทนทาลัม','Tantalum','transition',5,6,'d',[2,8,18,32,11,2]);
+el(74,'W',183.84,'ทังสเตน','Tungsten','transition',6,6,'d',[2,8,18,32,12,2]);
+el(75,'Re',186.21,'รีเนียม','Rhenium','transition',7,6,'d',[2,8,18,32,13,2]);
+el(76,'Os',190.23,'ออสเมียม','Osmium','transition',8,6,'d',[2,8,18,32,14,2]);
+el(77,'Ir',192.22,'อิริเดียม','Iridium','transition',9,6,'d',[2,8,18,32,15,2]);
+el(78,'Pt',195.08,'แพลทินัม','Platinum','transition',10,6,'d',[2,8,18,32,17,1]);
+el(79,'Au',196.97,'ทองคำ','Gold','transition',11,6,'d',[2,8,18,32,18,1],
+'ทองคำเป็นโลหะมีค่า ไม่เป็นสนิม นำไฟฟ้าได้ดีเยี่ยม ใช้ในเครื่องประดับและวงจรอิเล็กทรอนิกส์',
+'ทองคำบริสุทธิ์ยืดเป็นเส้นลวดยาวได้ถึง 100 กม. โดยใช้ทองคำเพียง 1 กรัม!');
+el(80,'Hg',200.59,'ปรอท','Mercury','transition',12,6,'d',[2,8,18,32,18,2]);
+el(81,'Tl',204.38,'แทลเลียม','Thallium','post',13,6,'p',[2,8,18,32,18,3]);
+el(82,'Pb',207.2,'ตะกั่ว','Lead','post',14,6,'p',[2,8,18,32,18,4]);
+el(83,'Bi',208.98,'บิสมัท','Bismuth','post',15,6,'p',[2,8,18,32,18,5]);
+el(84,'Po',209,'พอโลเนียม','Polonium','metalloid',16,6,'p',[2,8,18,32,18,6]);
+el(85,'At',210,'แอสทาทีน','Astatine','halogen',17,6,'p',[2,8,18,32,18,7]);
+el(86,'Rn',222,'เรดอน','Radon','noble',18,6,'p',[2,8,18,32,18,8]);
+// Period 7
+el(87,'Fr',223,'แฟรนเซียม','Francium','alkali',1,7,'s',[2,8,18,32,18,8,1]);
+el(88,'Ra',226,'เรเดียม','Radium','alkaline',2,7,'s',[2,8,18,32,18,8,2]);
+// Actinides 89-102
+el(89,'Ac',227,'แอกทิเนียม','Actinium','actinide',3,7,'f',[2,8,18,32,18,9,2]);
+el(90,'Th',232.04,'ทอเรียม','Thorium','actinide',4,7,'f',[2,8,18,32,18,10,2]);
+el(91,'Pa',231.04,'โพรแทกทิเนียม','Protactinium','actinide',5,7,'f',[2,8,18,32,18,10,1]); // simplified
+el(92,'U',238.03,'ยูเรเนียม','Uranium','actinide',6,7,'f',[2,8,18,32,21,9,2],
+'ยูเรเนียมใช้เป็นเชื้อเพลิงนิวเคลียร์ ปล่อยพลังงานจากปฏิกิริยาฟิชชัน',
+'ยูเรเนียม-235 ใช้ในระเบิดปรมาณูและโรงไฟฟ้านิวเคลียร์');
+el(93,'Np',237,'เนปทูเนียม','Neptunium','actinide',7,7,'f',[2,8,18,32,22,9,2]);
+el(94,'Pu',244,'พลูโทเนียม','Plutonium','actinide',8,7,'f',[2,8,18,32,23,9,2]);
+el(95,'Am',243,'อะเมริเซียม','Americium','actinide',9,7,'f',[2,8,18,32,24,9,2]);
+el(96,'Cm',247,'คูเรียม','Curium','actinide',10,7,'f',[2,8,18,32,25,9,2]);
+el(97,'Bk',247,'เบอร์คีเลียม','Berkelium','actinide',11,7,'f',[2,8,18,32,26,9,2]);
+el(98,'Cf',251,'แคลิฟอร์เนียม','Californium','actinide',12,7,'f',[2,8,18,32,28,8,2]);
+el(99,'Es',252,'ไอน์สไตเนียม','Einsteinium','actinide',13,7,'f',[2,8,18,32,29,8,2]);
+el(100,'Fm',257,'เฟอร์เมียม','Fermium','actinide',14,7,'f',[2,8,18,32,30,8,2]);
+el(101,'Md',258,'เมนเดลีเวียม','Mendelevium','actinide',15,7,'f',[2,8,18,32,31,8,2]);
+el(102,'No',259,'โนเบเลียม','Nobelium','actinide',16,7,'f',[2,8,18,32,32,8,2]);
+el(103,'Lr',262,'ลอว์เรนเซียม','Lawrencium','actinide',17,7,'f',[2,8,18,32,32,9,2]);
+el(104,'Rf',267,'รัทเทอร์ฟอร์เดียม','Rutherfordium','transition',4,7,'d',[2,8,18,32,32,10,2]);
+el(105,'Db',268,'ดับเนียม','Dubnium','transition',5,7,'d',[2,8,18,32,32,11,2]);
+el(106,'Sg',269,'ซีบอร์เกียม','Seaborgium','transition',6,7,'d',[2,8,18,32,32,12,2]);
+el(107,'Bh',270,'โบห์เรียม','Bohrium','transition',7,7,'d',[2,8,18,32,32,13,2]);
+el(108,'Hs',269,'ฮัสเซียม','Hassium','transition',8,7,'d',[2,8,18,32,32,14,2]);
+el(109,'Mt',278,'ไมต์เนเรียม','Meitnerium','transition',9,7,'d',[2,8,18,32,32,15,2]);
+el(110,'Ds',281,'ดาร์มชตัดเทียม','Darmstadtium','transition',10,7,'d',[2,8,18,32,32,17,1]);
+el(111,'Rg',282,'เรินต์เกเนียม','Roentgenium','transition',11,7,'d',[2,8,18,32,32,18,1]);
+el(112,'Cn',285,'โคเปอร์นิเซียม','Copernicium','transition',12,7,'d',[2,8,18,32,32,18,2]);
+el(113,'Nh',286,'นิโฮเนียม','Nihonium','post',13,7,'p',[2,8,18,32,32,18,3]);
+el(114,'Fl',289,'เฟลโรเวียม','Flerovium','post',14,7,'p',[2,8,18,32,32,18,4]);
+el(115,'Mc',290,'มอสโกเวียม','Moscovium','post',15,7,'p',[2,8,18,32,32,18,5]);
+el(116,'Lv',293,'ลิเวอร์มอเรียม','Livermorium','post',16,7,'p',[2,8,18,32,32,18,6]);
+el(117,'Ts',294,'เทนเนสซีน','Tennessine','halogen',17,7,'p',[2,8,18,32,32,18,7]);
+el(118,'Og',294,'ออแกเนสซอน','Oganesson','noble',18,7,'p',[2,8,18,32,32,18,8],
+'ออแกเนสซอนเป็นธาตุหนักที่สุดที่สังเคราะห์ได้จนถึงปัจจุบัน เป็นก๊าซมีตระกูล',
+'ตั้งชื่อตาม Yuri Oganessian นักฟิสิกส์นิวเคลียร์ผู้บุกเบิกการสังเคราะห์ธาตุหนัก');
+
+// ========== THREE.JS ATOM ==========
+const container=document.getElementById('atomContainer');
+const scene=new THREE.Scene();
+const W=container.clientWidth,H=container.clientHeight;
+const camera=new THREE.PerspectiveCamera(45,W/H,0.01,100);
+camera.position.set(3,2,5);
+
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+renderer.setSize(W,H);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1;
+
+// Gradient bg
+const bgC=document.createElement('canvas');
+bgC.width=2;bgC.height=512;
+const bgCtx=bgC.getContext('2d');
+const gr=bgCtx.createLinearGradient(0,0,0,512);
+gr.addColorStop(0,'#0f0e17');gr.addColorStop(1,'#06060e');
+bgCtx.fillStyle=gr;bgCtx.fillRect(0,0,2,512);
+scene.background=new THREE.CanvasTexture(bgC);
+container.appendChild(renderer.domElement);
+
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;controls.dampingFactor=0.08;
+controls.minDistance=1.5;controls.maxDistance=15;
+controls.autoRotate=true;controls.autoRotateSpeed=2;
+
+// Lights
+scene.add(new THREE.AmbientLight(0x334466,0.4));
+const k=new THREE.DirectionalLight(0xffeedd,1.5);k.position.set(4,6,3);scene.add(k);
+const f=new THREE.DirectionalLight(0x4488ff,0.5);f.position.set(-3,1,4);scene.add(f);
+const r=new THREE.DirectionalLight(0x6688cc,0.3);r.position.set(-2,2,-5);scene.add(r);
+scene.add(new THREE.HemisphereLight(0x445566,0x0a0a0a,0.4));
+
+// Atom group
+let atomGroup=new THREE.Group();scene.add(atomGroup);
+
+// ========== BUILD ATOM ==========
+function buildAtom(z){
+  while(atomGroup.children.length)atomGroup.remove(atomGroup.children[0]);
+  const el=E[z];if(!el)return;
+  const conf=el.conf||[1];
+  const totalShells=conf.length;
+
+  // Background glow sphere
+  const glow=new THREE.MeshPhysicalMaterial({
+    color:0x4488ff,transparent:true,opacity:0.03,roughness:0.0,side:THREE.BackSide,
+    emissive:0x4488ff,emissiveIntensity:0.02
+  });
+  const gs=new THREE.Mesh(new THREE.SphereGeometry(2.5,32,32),glow);
+  atomGroup.add(gs);
+
+  // Nucleus
+  const nucMat=new THREE.MeshPhysicalMaterial({
+    color:0xff6b6b,roughness:0.15,metalness:0.3,clearcoat:0.5,
+    emissive:0xff6b6b,emissiveIntensity:0.15
+  });
+  const nucleus=new THREE.Mesh(new THREE.SphereGeometry(0.15+Math.min(z,118)*0.001,24,24),nucMat);
+  nucleus.castShadow=true;
+  atomGroup.add(nucleus);
+
+  // Nucleus glow
+  const nGlow=new THREE.MeshPhysicalMaterial({
+    color:0xff4444,transparent:true,opacity:0.08,roughness:0.0,
+    emissive:0xff4444,emissiveIntensity:0.1,side:THREE.BackSide
+  });
+  const ng=new THREE.Mesh(new THREE.SphereGeometry(0.22+Math.min(z,118)*0.002,20,20),nGlow);
+  atomGroup.add(ng);
+
+  // Label on nucleus
+  const canvas=document.createElement('canvas');
+  canvas.width=64;canvas.height=64;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,64,64);
+  ctx.fillStyle='rgba(255,255,255,0.9)';
+  ctx.font='bold 40px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(el.sym,32,34);
+  const tex=new THREE.CanvasTexture(canvas);
+  const labelMat=new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false});
+  const label=new THREE.Sprite(labelMat);
+  label.scale.set(0.6,0.6,1);
+  label.position.y=0.4;
+  atomGroup.add(label);
+
+  // Electron shells & electrons
+  const shellColors=[0x70a1ff,0x2ed573,0xffd32a,0xff6b6b,0xa29bfe,0xffa502,0x5352ed];
+  const shellRadii=[0.45,0.7,1.0,1.35,1.7,2.0,2.3];
+
+  for(let s=0;s<totalShells;s++){
+    const eCount=conf[s];
+    if(!eCount||eCount===0)continue;
+    const radius=shellRadii[s]||(0.5+s*0.3);
+
+    // Shell orbital (transparent sphere)
+    const sMat=new THREE.MeshPhysicalMaterial({
+      color:shellColors[s%shellColors.length],
+      transparent:true,opacity:0.04,roughness:0.2,metalness:0.0,
+      wireframe:false,side:THREE.DoubleSide,depthWrite:false
+    });
+    const shell=new THREE.Mesh(new THREE.SphereGeometry(radius,24,24),sMat);
+    atomGroup.add(shell);
+
+    // Wireframe ring
+    const wMat=new THREE.MeshBasicMaterial({
+      color:shellColors[s%shellColors.length],
+      transparent:true,opacity:0.03,wireframe:true
+    });
+    const wire=new THREE.Mesh(new THREE.SphereGeometry(radius,16,12),wMat);
+    atomGroup.add(wire);
+
+    // Electron orbits (3 rings at different angles)
+    const orbitMat=new THREE.MeshBasicMaterial({
+      color:shellColors[s%shellColors.length],
+      transparent:true,opacity:0.06
+    });
+    for(let o=0;o<2;o++){
+      const ring=new THREE.Mesh(
+        new THREE.RingGeometry(radius-0.005,radius+0.001,48),orbitMat
+      );
+      if(o===0)ring.rotation.x=Math.PI/2;
+      else if(o===1)ring.rotation.z=Math.PI/3;ring.rotation.y=Math.PI/4;
+      atomGroup.add(ring);
+    }
+
+    // Electrons
+    const eMat=new THREE.MeshPhysicalMaterial({
+      color:shellColors[s%shellColors.length],
+      emissive:shellColors[s%shellColors.length],
+      emissiveIntensity:0.4,roughness:0.1,metalness:0.0,
+      clearcoat:0.3
+    });
+    for(let e=0;e<eCount;e++){
+      const ang=(e/eCount)*Math.PI*2;
+      const tilt=Math.acos(2*Math.random()-1)*0.3;
+      const elDot=new THREE.Mesh(new THREE.SphereGeometry(0.035,6,6),eMat);
+      elDot.position.set(radius*Math.cos(ang)*Math.cos(tilt),radius*Math.sin(ang)*Math.cos(tilt),radius*Math.sin(tilt));
+      elDot.userData={radius,ang:tilt,speed:0.5+Math.random()*0.5,tilt,phase:e};
+      atomGroup.add(elDot);
+    }
+  }
+
+  // Proton/neutron info text
+  const pCount=z;
+  const nCount=Math.round(el.mass)-z;
+  const infoC=document.createElement('canvas');
+  infoC.width=128;infoC.height=48;
+  const ic=infoC.getContext('2d');
+  ic.clearRect(0,0,128,48);
+  ic.fillStyle='rgba(255,255,255,0.3)';
+  ic.font='12px Arial';ic.textAlign='center';
+  ic.fillText(pCount+'p '+nCount+'n',64,22);
+  ic.font='10px Arial';ic.fillStyle='rgba(255,255,255,0.12)';
+  ic.fillText('Z='+z+' A='+Math.round(el.mass),64,40);
+  const iTex=new THREE.CanvasTexture(infoC);
+  const iMat=new THREE.SpriteMaterial({map:iTex,transparent:true,depthWrite:false,opacity:0.7});
+  const iSprite=new THREE.Sprite(iMat);
+  iSprite.scale.set(1.0,0.4,1);iSprite.position.y=-0.6;
+  atomGroup.add(iSprite);
+}
+
+// ========== BUILD TABLE ==========
+function buildTable(){
+  const ptable=document.getElementById('ptable');
+  // Create grid with proper positioning
+  for(let z=1;z<=118;z++){
+    const el=E[z];if(!el)continue;
+    const div=document.createElement('div');
+    const cat=el.cat||'nonmetal';
+    div.className=`elem c-${cat} g${el.g} r${el.p}`;
+    div.innerHTML=`<div class="z">${z}</div><div class="sym">${el.sym}</div><div class="mass">${el.mass.toFixed(el.mass<100?3:0)}</div><div class="name-th">${el.th||''}</div>`;
+    div.dataset.z=z;
+    div.addEventListener('click',()=>selectElement(z));
+    ptable.appendChild(div);
+  }
+}
+
+// Legend
+function buildLegend(){
+  const el=document.getElementById('legend');
+  el.innerHTML=CATS.map(c=>
+    `<div class="leg-item"><span class="leg-dot" style="background:${CAT_COLORS[c]}"></span>${CAT_TH[c]}</div>`
+  ).join('');
+}
+
+// ========== SELECT ELEMENT ==========
+let lastZ=null;
+function selectElement(z){
+  const el=E[z];if(!el)return;
+  lastZ=z;
+  buildAtom(z);
+  updateInfo(z);
+  // Highlight
+  document.querySelectorAll('.elem').forEach(e=>e.classList.remove('active'));
+  const target=document.querySelector(`.elem[data-z="${z}"]`);
+  if(target)target.classList.add('active');
+  document.getElementById('infoPanel').classList.add('open');
+  document.getElementById('overlay').classList.add('show');
+}
+
+function updateInfo(z){
+  const el=E[z];if(!el)return;
+  document.getElementById('ipSym').textContent=el.sym;
+  document.getElementById('ipSym').style.color=CAT_COLORS[el.cat]||'#fff';
+  document.getElementById('ipZ').textContent='ธาตุลำดับที่ '+z+' • Atomic Number '+z;
+  document.getElementById('ipName').textContent=el.th||'';
+  document.getElementById('ipEn').textContent=el.en||'';
+  document.getElementById('ipDesc').textContent=el.desc||'เป็นธาตุในกลุ่ม '+CAT_TH[el.cat]+' มีเลขอะตอม '+z+' มวลอะตอม '+el.mass;
+  document.getElementById('ipConf').textContent=el.conf?'K "+el.conf.map((c,i)=>'ชั้นที่'+(i+1)+'='+c).join(', ')+'"':'';
+  document.getElementById('ipFact').textContent=el.fact||'';
+  // Properties
+  const props=document.getElementById('ipProps');
+  props.innerHTML=`
+    <div class="ip-prop-item"><div class="l">หมู่</div><div class="v">${el.g}</div></div>
+    <div class="ip-prop-item"><div class="l">คาบ</div><div class="v">${el.p}</div></div>
+    <div class="ip-prop-item"><div class="l">บล็อก</div><div class="v">${el.block}</div></div>
+    <div class="ip-prop-item"><div class="l">ประเภท</div><div class="v">${CAT_TH[el.cat]}</div></div>
+    <div class="ip-prop-item"><div class="l">โปรตอน</div><div class="v">${z}</div></div>
+    <div class="ip-prop-item"><div class="l">นิวตรอน</div><div class="v">${Math.round(el.mass)-z}</div></div>
+    <div class="ip-prop-item"><div class="l">อิเล็กตรอน</div><div class="v">${z}</div></div>
+    <div class="ip-prop-item"><div class="l">มวลอะตอม</div><div class="v">${el.mass}</div></div>
+  `;
+}
+
+// ========== ANIMATION ==========
+let animTime=0;
+function animate(){
+  requestAnimationFrame(animate);
+  animTime+=0.01;
+  controls.update();
+
+  // Animate electrons
+  atomGroup.children.forEach(child=>{
+    if(child.isMesh&&child.material&&child.material._origC){
+      // skip
+    }
+    if(child.userData&&child.userData.radius!=null){
+      const d=child.userData;
+      d.ang+=0.015*d.speed;
+      const r=d.radius;
+      child.position.set(r*Math.cos(d.ang)*Math.cos(d.tilt),r*Math.sin(d.ang)*Math.cos(d.tilt||0),r*Math.sin(d.tilt||0));
+    }
+  });
+
+  // Nucleus pulse
+  atomGroup.children.forEach(c=>{
+    if(c.geometry&&c.geometry.type==='SphereGeometry'&&c.material&&c.material.emissiveIntensity>0.1){
+      const s=1+Math.sin(animTime*3)*0.02;
+      c.scale.set(s,s,s);
+    }
+  });
+
+  renderer.render(scene,camera);
+}
+
+// ========== EVENTS ==========
+document.getElementById('closePanel').addEventListener('click',()=>{
+  document.getElementById('infoPanel').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+  document.querySelectorAll('.elem').forEach(e=>e.classList.remove('active'));
+});
+document.getElementById('overlay').addEventListener('click',()=>{
+  document.getElementById('infoPanel').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+  document.querySelectorAll('.elem').forEach(e=>e.classList.remove('active'));
+});
+document.addEventListener('keydown',e=>{
+  if(e.code==='Escape'){
+    document.getElementById('infoPanel').classList.remove('open');
+    document.getElementById('overlay').classList.remove('show');
+    document.querySelectorAll('.elem').forEach(e=>e.classList.remove('active'));
+  }
+});
+window.addEventListener('resize',()=>{
+  const w=container.clientWidth,h=container.clientHeight;
+  camera.aspect=w/h;camera.updateProjectionMatrix();
+  renderer.setSize(w,h);
+});
+
+buildLegend();
+buildTable();
+selectElement(1);
+animate();
+</script>
+</body>
+</html>
