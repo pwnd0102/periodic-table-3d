@@ -277,7 +277,7 @@ el(30,'Zn',65.38,'สังกะสี','Zinc','transition',12,4,'d',[2,8,18,2]
 'สังกะสีจำเป็นต่อระบบภูมิคุ้มกัน');
 // Period 5
 el(31,'Ga',69.723,'แกลเลียม','Gallium','post',13,4,'p',[2,8,18,3],
-'แกลเลียมหลอมเหลวที่อุณหภูมิ 30°C ถือในมือละลายได้',);
+'แกลเลียมหลอมเหลวที่อุณหภูมิ 30°C ถือในมือละลายได้');
 el(32,'Ge',72.630,'เจอร์เมเนียม','Germanium','metalloid',14,4,'p',[2,8,18,4]);
 el(33,'As',74.922,'สารหนู','Arsenic','metalloid',15,4,'p',[2,8,18,5],
 'สารหนูเป็นพิษร้ายแรง ใช้ในอุตสาหกรรมเซมิคอนดักเตอร์');
@@ -549,7 +549,10 @@ function buildTable(){
     const el=E[z];if(!el)continue;
     const div=document.createElement('div');
     const cat=el.cat||'nonmetal';
-    div.className=`elem c-${cat} g${el.g} r${el.p}`;
+    let gridRow=el.p;
+    if(z>=57&&z<=71)gridRow=8;
+    if(z>=89&&z<=103)gridRow=9;
+    div.className=`elem c-${cat} g${el.g} r${gridRow}`;
     div.innerHTML=`<div class="z">${z}</div><div class="sym">${el.sym}</div><div class="mass">${el.mass.toFixed(el.mass<100?3:0)}</div><div class="name-th">${el.th||''}</div>`;
     div.dataset.z=z;
     div.addEventListener('click',()=>selectElement(z));
@@ -588,7 +591,7 @@ function updateInfo(z){
   document.getElementById('ipName').textContent=el.th||'';
   document.getElementById('ipEn').textContent=el.en||'';
   document.getElementById('ipDesc').textContent=el.desc||'เป็นธาตุในกลุ่ม '+CAT_TH[el.cat]+' มีเลขอะตอม '+z+' มวลอะตอม '+el.mass;
-  document.getElementById('ipConf').textContent=el.conf?'K "+el.conf.map((c,i)=>'ชั้นที่'+(i+1)+'='+c).join(', ')+'"':'';
+  document.getElementById('ipConf').textContent=el.conf?el.conf.map(function(c,i){return '\u0e0a\u0e31\u0e49\u0e19\u0e17\u0e35\u0e48'+(i+1)+'='+c}).join(', '):'';
   document.getElementById('ipFact').textContent=el.fact||'';
   // Properties
   const props=document.getElementById('ipProps');
