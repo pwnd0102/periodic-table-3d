@@ -151,7 +151,8 @@ body{font-family:'Sarabun','Prompt',-apple-system,'Segoe UI',sans-serif;backgrou
     <div class="ip-en" id="ipEn">Hydrogen</div>
     <div class="ip-prop" id="ipProps"></div>
     <div class="ip-section"><label>รายละเอียด</label><p id="ipDesc"></p></div>
-    <div class="ip-section"><label>การจัดเรียงอิเล็กตรอน</label><p id="ipConf"></p></div>
+    <div class="ip-section"><label>การจัดเรียงอิเล็กตรอน (แบบครึ่ง·Shell)</label><p id="ipConf"></p></div>
+    <div class="ip-section"><label>การจัดเรียงอิเล็กตรอน (แบบย่อย·Subshell)</label><p id="ipConfDetail"></p></div>
     <div class="ip-section"><label>ข้อเท็จจริง</label><p id="ipFact"></p></div>
   </div>
 </div>
@@ -541,6 +542,30 @@ function buildAtom(z){
   atomGroup.add(iSprite);
 }
 
+// ========== ELECTRON CONFIG GENERATOR ==========
+function getSubshellConfig(z){
+  const order=[
+    {n:1,s:'s',m:2},{n:2,s:'s',m:2},{n:2,s:'p',m:6},{n:3,s:'s',m:2},
+    {n:3,s:'p',m:6},{n:4,s:'s',m:2},{n:3,s:'d',m:10},{n:4,s:'p',m:6},
+    {n:5,s:'s',m:2},{n:4,s:'d',m:10},{n:5,s:'p',m:6},{n:6,s:'s',m:2},
+    {n:4,s:'f',m:14},{n:5,s:'d',m:10},{n:6,s:'p',m:6},{n:7,s:'s',m:2},
+    {n:5,s:'f',m:14},{n:6,s:'d',m:10},{n:7,s:'p',m:6}
+  ];
+  const parts=[];let left=z;
+  for(const o of order){
+    if(left<=0)break;
+    const c=Math.min(left,o.m);
+    parts.push(o.n+o.s+superscript(c));
+    left-=c;
+  }
+  return parts.join(' ');
+}
+
+function superscript(n){
+  const sup={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+  return String(n).split('').map(d=>sup[d]||d).join('');
+}
+
 // ========== BUILD TABLE ==========
 function buildTable(){
   const ptable=document.getElementById('ptable');
@@ -592,6 +617,7 @@ function updateInfo(z){
   document.getElementById('ipEn').textContent=el.en||'';
   document.getElementById('ipDesc').textContent=el.desc||'เป็นธาตุในกลุ่ม '+CAT_TH[el.cat]+' มีเลขอะตอม '+z+' มวลอะตอม '+el.mass;
   document.getElementById('ipConf').textContent=el.conf?el.conf.map(function(c,i){return '\u0e0a\u0e31\u0e49\u0e19\u0e17\u0e35\u0e48'+(i+1)+'='+c}).join(', '):'';
+  document.getElementById('ipConfDetail').textContent=getSubshellConfig(z);
   document.getElementById('ipFact').textContent=el.fact||'';
   // Properties
   const props=document.getElementById('ipProps');
